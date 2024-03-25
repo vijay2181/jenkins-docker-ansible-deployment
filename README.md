@@ -254,6 +254,128 @@ pipeline {
 ```
 
 
+## Run docker playbook 
+
+- create dockerhub credentials in jenkins credential manager
+
+![image](https://github.com/vijay2181/jenkins-docker-ansible-deployment/assets/66196388/6dbf9bf5-d372-4553-9993-1ffd6fa62ac3)
+
+
+```
+install docker on all agents:
+=============================
+sudo yum install docker -y
+sudo usermod -aG docker ansible
+- exit and refresh terminals
+
+[ansible@ip-172-31-28-203 ~]$ docker --version
+Docker version 25.0.3, build 4debf41
+
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo systemctl status docker
+
+sample manual testing:
+----------------------
+docker login -u username -p password
+docker pull vijay2181/vijay-python-3.9:latest
+docker run -d --name sample --restart always vijay2181/vijay-python-3.9:latest sleep infinity
+docker exec -it sample bash
+root@1bb52653f32c:/# python3 -V
+Python 3.9.5
+
+for docker tagging:
+docker tag vijay2181/vijay-python-3.9:latest vijay2181/vijay-python-3.9:1.0
+docker push vijay2181/vijay-python-3.9:1.0
+
+docker tag vijay2181/vijay-python-3.9:latest vijay2181/vijay-python-3.9:2.0
+docker push vijay2181/vijay-python-3.9:2.0
+
+docker tag vijay2181/vijay-python-3.9:latest vijay2181/vijay-python-3.9:2.0
+docker push vijay2181/vijay-python-3.9:2.0
+```
+
+
+
+- now we need to do all above docker manual steps using jenkins pipeline
+
+```
+Ansible playbook for docker:
+----------------------------
+- on ansible master/jenkins server
+cd /etc/ansible/playbooks
+
+vi var.yaml
+-----------
+env: "dev"
+docker_user: "vijay2181"
+docker_passwd: "password"
+image_tag: "latest"
+
+- you need to encrypt this file using ansible-valut
+
+vi ansible-docker.yaml
+----------------------
+---
+- name: Deploy Docker container
+  hosts: "{{ env }}"
+  vars_files:
+    - var.yaml
+  tasks:
+    - name: Docker login to ECR/Docker Hub (if required)
+      shell: |
+        docker login -u {{ docker_user }} -p {{ docker_passwd }}
+
+    - name: Pull Docker image
+      shell: |
+        docker pull vijay2181/vijay-python-3.9:{{ image_tag }}
+
+    - name: Run Docker container
+      shell: |
+        docker run -d --name sample --restart always vijay2181/vijay-python-3.9:{{ image_tag }} sleep infinity
+
+
+ansible-playbook ansible-docker.yaml --extra-vars env=dev --check
+
+```
+
+# Jenkinsfile
+
+```
+pipeline {
+    agent any
+    
+    parameters {
+    choice(name: 'ENVIRONMENT', choices: ['dev', 'qa', 'prod'], description: 'Select environment to deploy')
+    choice(name: 'IMAGE_TAG', choices: ['1.0', '2.0', '3.0', 'latest'], description: 'Select Docker image tag to deploy')
+}
+    
+    stages {
+        stage('Run Ansible Playbook') {
+            steps {
+                script {
+                    // Debugging output
+                    echo "Attempting to switch to ansible user"
+                    
+                    // Execute commands as ansible user
+                    withCredentials([usernamePassword(credentialsId: 'ansible-pw', usernameVariable: 'ANSIBLE_USERNAME', passwordVariable: 'ANSIBLE_PASSWORD')]) {
+                        sh """
+                            echo "${ANSIBLE_PASSWORD}" | su - ansible -c 'cd /etc/ansible/playbooks && ansible-playbook ansible-docker.yaml --extra-vars "env=${params.ENVIRONMENT}, image_tag=${params.IMAGE_TAG}"'
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
+
+```
+![image](https://github.com/vijay2181/jenkins-docker-ansible-deployment/assets/66196388/47a5eab1-1468-44a9-b885-fea14c191297)
+
+
+
+
+
 
 
 
