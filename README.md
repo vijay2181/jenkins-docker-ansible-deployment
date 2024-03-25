@@ -256,11 +256,6 @@ pipeline {
 
 ## Run docker playbook 
 
-- create dockerhub credentials in jenkins credential manager
-
-![image](https://github.com/vijay2181/jenkins-docker-ansible-deployment/assets/66196388/6dbf9bf5-d372-4553-9993-1ffd6fa62ac3)
-
-
 ```
 install docker on all agents:
 =============================
@@ -308,11 +303,10 @@ cd /etc/ansible/playbooks
 vi var.yaml
 -----------
 env: "dev"
-docker_user: "vijay2181"
-docker_passwd: "password"
 image_tag: "latest"
 
-- you need to encrypt this file using ansible-valut
+- you can encrypt this file if needed
+- those variables can be overriden at cli
 
 vi ansible-docker.yaml
 ----------------------
@@ -340,6 +334,15 @@ ansible-playbook ansible-docker.yaml --extra-vars env=dev --check
 ```
 
 # Jenkinsfile
+
+- create dockerhub credentials in jenkins credential manager
+
+![image](https://github.com/vijay2181/jenkins-docker-ansible-deployment/assets/66196388/6dbf9bf5-d372-4553-9993-1ffd6fa62ac3)
+
+- im taking two parameters
+- 1.environment
+- 2.image tag
+- image tag as of now hardcoded, but we can get all image tags dynamically using shell script by activate reatice choice parameter
 
 ```
 pipeline {
