@@ -306,7 +306,7 @@ env: "dev"
 image_tag: "latest"
 
 - you can encrypt this file if needed
-- those variables can be overriden at cli
+- those variables can be overriden at cli by using --extra-vars
 
 vi ansible-docker.yaml
 ----------------------
@@ -346,29 +346,33 @@ ansible-playbook ansible-docker.yaml --extra-vars env=dev --check
 
 ```
 pipeline {
+    
     agent any
-    
+
     parameters {
-    choice(name: 'ENVIRONMENT', choices: ['dev', 'qa', 'prod'], description: 'Select environment to deploy')
-    choice(name: 'IMAGE_TAG', choices: ['1.0', '2.0', '3.0', 'latest'], description: 'Select Docker image tag to deploy')
-}
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'qa', 'prod'], description: 'Select environment to deploy')
+        choice(name: 'IMAGE_TAG', choices: ['1.0', '2.0', '3.0', 'latest'], description: 'Select Docker image tag to deploy')
+    }
     
+    environment {
+        ENVIRONMENT = "${params.ENVIRONMENT}"
+        IMAGE_TAG = "${params.IMAGE_TAG}"
+    }
+
     stages {
-        stage('Run Ansible Playbook') {
+        stage('Ansible Docker Integration') {
             steps {
                 script {
-                    // Debugging output
-                    echo "Attempting to switch to ansible user"
-                    
-                    // Execute commands as ansible user
-                    withCredentials([usernamePassword(credentialsId: 'ansible-pw', usernameVariable: 'ANSIBLE_USERNAME', passwordVariable: 'ANSIBLE_PASSWORD')]) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD'),
+                                     usernamePassword(credentialsId: 'ansible-pw', usernameVariable: 'ANSIBLE_USERNAME', passwordVariable: 'ANSIBLE_PASSWORD')]) {
                         sh """
-                            echo "${ANSIBLE_PASSWORD}" | su - ansible -c 'cd /etc/ansible/playbooks && ansible-playbook ansible-docker.yaml --extra-vars "env=${params.ENVIRONMENT}, image_tag=${params.IMAGE_TAG}"'
+                        echo "${ANSIBLE_PASSWORD}" | su - ansible -c "ansible-playbook /etc/ansible/playbooks/test/docker-login.yaml --extra-vars 'registry_url=https://index.docker.io/v1/ username=\$DOCKER_USERNAME password=\$DOCKER_PASSWORD env=${ENVIRONMENT} image_tag=${IMAGE_TAG}'"
                         """
                     }
                 }
             }
         }
+        // Add more stages as needed
     }
 }
 
