@@ -33,7 +33,6 @@ Additionally, separating Jenkins and Ansible allows for better management of acc
 Jenkins Installation:
 ======================
 - take t2.medium amazon linux 2 instance
-- in real time just tell them that we are using Memory Optimized jenkins instances -> r5a.xlarge or r5a.2xlarge
 
 - Install java:
 sudo dnf install java-17-amazon-corretto-devel -y      ---> includes jdk
@@ -55,25 +54,6 @@ systemctl status jenkins
 
 - access jenkins
 http://ip:8080
-
-
-Install git
-------------
-sudo yum install git
-
-Install maven
---------------
-- we may have to install multiple maven verions, so on jenkins global tool configurations i will install maven
-Dashboard > Manage Jenkins > Tools > Maven installations
-Name: MAVEN3.9.5
-Install automatically
-Version: 3.9.5
-
-Java17 project:
----------------
-- take java 17 project for maven build, because we have java17 installed for jenkins
-https://github.com/vijay2181/java-maven-SampleWarApp.git
-
 ```
 
 ```
@@ -381,7 +361,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD'),
                                      usernamePassword(credentialsId: 'ansible-pw', usernameVariable: 'ANSIBLE_USERNAME', passwordVariable: 'ANSIBLE_PASSWORD')]) {
                         sh """
-                        echo "${ANSIBLE_PASSWORD}" | su - ansible -c "ansible-playbook /etc/ansible/playbooks/test/docker-login.yaml --extra-vars 'registry_url=https://index.docker.io/v1/ username=\$DOCKER_USERNAME password=\$DOCKER_PASSWORD env=${ENVIRONMENT} image_tag=${IMAGE_TAG}'"
+                        echo "${ANSIBLE_PASSWORD}" | su - ansible -c "ansible-playbook /etc/ansible/playbooks/ansible-docker.yaml --extra-vars 'registry_url=https://index.docker.io/v1/ username=\$DOCKER_USERNAME password=\$DOCKER_PASSWORD env=${ENVIRONMENT} image_tag=${IMAGE_TAG}'"
                         """
                     }
                 }
