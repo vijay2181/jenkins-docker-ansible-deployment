@@ -300,25 +300,18 @@ Ansible playbook for docker:
 - on ansible master/jenkins server
 cd /etc/ansible/playbooks
 
-vi var.yaml
------------
-env: "dev"
-image_tag: "latest"
-
-- you can encrypt this file if needed
-- those variables can be overriden at cli by using --extra-vars
-
 vi ansible-docker.yaml
 ----------------------
 ---
-- name: Deploy Docker container
+- name: Docker Login Playbook
   hosts: "{{ env }}"
-  vars_files:
-    - var.yaml
+  become: yes
   tasks:
-    - name: Docker login to ECR/Docker Hub (if required)
-      shell: |
-        docker login -u {{ docker_user }} -p {{ docker_passwd }}
+    - name: Docker login
+      docker_login:
+        registry_url: "{{ registry_url }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
 
     - name: Pull Docker image
       shell: |
@@ -329,13 +322,35 @@ vi ansible-docker.yaml
         docker run -d --name sample --restart always vijay2181/vijay-python-3.9:{{ image_tag }} sleep infinity
 
 
-ansible-playbook ansible-docker.yaml --extra-vars env=dev --check
+ansible-playbook ansible-docker.yaml --extra-vars 'registry_url=https://index.docker.io/v1/ username=vijay2181 password=password env=qa image_tag=2.0' --check
+
+
+PLAY [Docker Login Playbook] ********************************************************************************************************************
+
+TASK [Gathering Facts] **************************************************************************************************************************
+[WARNING]: Platform linux on host 172.31.30.87 is using the discovered Python interpreter at /usr/bin/python3.9, but future installation of
+another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.15/reference_appendices/interpreter_discovery.html for more information.
+ok: [172.31.30.87]
+
+TASK [Docker login] *****************************************************************************************************************************
+changed: [172.31.30.87]
+
+TASK [Pull Docker image] ************************************************************************************************************************
+skipping: [172.31.30.87]
+
+TASK [Run Docker container] *********************************************************************************************************************
+skipping: [172.31.30.87]
+
+PLAY RECAP **************************************************************************************************************************************
+172.31.30.87               : ok=2    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
 
 ```
 
-# Jenkinsfile
+# Jenkins pipeline
 
 - create dockerhub credentials in jenkins credential manager
+- now we will implement docker ansible integration using jenkins pipeline
 
 ![image](https://github.com/vijay2181/jenkins-docker-ansible-deployment/assets/66196388/6dbf9bf5-d372-4553-9993-1ffd6fa62ac3)
 
@@ -378,6 +393,9 @@ pipeline {
 
 ```
 ![image](https://github.com/vijay2181/jenkins-docker-ansible-deployment/assets/66196388/47a5eab1-1468-44a9-b885-fea14c191297)
+
+![image](https://github.com/vijay2181/jenkins-docker-ansible-deployment/assets/66196388/76cc4d0f-ed7c-45d5-8335-67922166b105)
+
 
 
 
